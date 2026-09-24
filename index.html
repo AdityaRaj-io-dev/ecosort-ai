@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoSort AI - Smart Waste Companion</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- TensorFlow.js and Teachable Machine Image Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        eco: {
+                            50: '#f4f8f2',
+                            100: '#e5f0e1',
+                            200: '#cbe2c2',
+                            300: '#a3cc95',
+                            400: '#76b063',
+                            500: '#52943e',
+                            600: '#3d752e',
+                            700: '#2f5b24',
+                            800: '#27491f',
+                            900: '#213d1c',
+                            950: '#11210e',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f7f0;
+            color: #213d1c;
+        }
+        .bg-grid-pattern {
+            background-size: 32px 32px;
+            background-image: linear-gradient(to right, rgba(82, 148, 62, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(82, 148, 62, 0.05) 1px, transparent 1px);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e5f0e1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a3cc95;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #76b063;
+        }
+    </style>
+</head>
+<body class="bg-eco-50 bg-grid-pattern min-h-screen flex flex-col md:flex-row antialiased select-none">
+
+    <!-- SIDEBAR -->
+    <aside class="w-full md:w-64 bg-eco-50/90 backdrop-blur-md border-b md:border-b-0 md:border-r border-eco-200/60 p-5 flex flex-col justify-between shrink-0 z-20">
+        <div>
+            <!-- Logo Section -->
+            <div class="flex items-center space-x-3 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-eco-200 border border-eco-300 flex items-center justify-center text-eco-800 shadow-sm">
+                    <i class="fa-solid fa-leaf text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold tracking-tight text-eco-900 text-base">EcoSort AI</h1>
+                    <p class="text-[10px] tracking-wider uppercase font-mono text-eco-600 font-medium">Smart Waste Companion</p>
+                </div>
+            </div>
+
+            <!-- Tip Card -->
+            <div class="bg-eco-100/70 border border-eco-200/70 rounded-2xl p-3.5 mb-6 text-xs text-eco-800 leading-relaxed shadow-sm">
+                <div class="flex items-start space-x-2">
+                    <i class="fa-solid fa-seedling text-eco-600 mt-0.5"></i>
+                    <p>Small choices grow a better day.</p>
+                </div>
+            </div>
+
+            <!-- Nav Links -->
+            <nav class="space-y-1">
+                <a href="#overview" onclick="switchTab('overview')" id="nav-overview" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium bg-eco-200/70 text-eco-900 transition-colors shadow-xs">
+                    <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                    <span>Overview</span>
+                </a>
+                <a href="#how-it-works" onclick="switchTab('how-it-works')" id="nav-how" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-eco-700 hover:bg-eco-100/60 transition-colors">
+                    <i class="fa-solid fa-circle-question w-5 text-center"></i>
+                    <span>How it works</span>
+                </a>
+                <a href="#device-status" onclick="switchTab('device-status')" id="nav-device" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-eco-700 hover:bg-eco-100/60 transition-colors">
+                    <i class="fa-solid fa-sliders w-5 text-center"></i>
+                    <span>Device status</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Sidebar Footer / Private Card -->
+        <div class="mt-8 pt-4 border-t border-eco-200/60">
+            <div class="bg-white/60 border border-eco-200/80 rounded-2xl p-4 shadow-xs relative overflow-hidden">
+                <div class="absolute -right-4 -bottom-4 text-eco-200/50 text-5xl pointer-events-none">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="flex items-center space-x-2 text-eco-800 font-semibold text-xs mb-1">
+                    <i class="fa-solid fa-shield text-eco-600"></i>
+                    <span>Private by design</span>
+                </div>
+                <p class="text-[11px] text-eco-700 leading-normal">Your camera stays on this device. Nothing is uploaded by EcoSort.</p>
+            </div>
+            <div class="mt-3 text-[10px] font-mono text-eco-600 flex justify-between items-center px-1">
+                <span>BUILD 01.04</span>
+                <span class="flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>LOCAL MODEL</span></span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <!-- Top Workspace Header -->
+        <header class="bg-white/40 backdrop-blur-sm border-b border-eco-200/60 px-6 py-3 flex flex-wrap items-center justify-between gap-4 text-xs">
+            <div class="flex items-center space-x-2 font-mono text-eco-700">
+                <span class="text-eco-900 font-semibold tracking-wider">WORKSPACE</span>
+                <span class="text-eco-400">/</span>
+                <span class="text-eco-800 uppercase">TODAY</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mx-1"></span>
+                <span class="text-eco-600 hidden sm:inline">A brighter way to sort what comes next.</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <div class="bg-white border border-eco-200 shadow-2xs rounded-full px-3 py-1 flex items-center space-x-2 text-eco-800 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 absolute"></span>
+                    <span class="ml-2">Local mode</span>
+                </div>
+                <button onclick="toggleSettingsModal()" class="w-8 h-8 rounded-full bg-white border border-eco-200 flex items-center justify-center text-eco-700 hover:bg-eco-100 transition-colors shadow-2xs cursor-pointer" title="Settings & Model URL">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Body -->
+        <div class="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+            
+            <!-- Hero Banner Section -->
+            <div class="relative bg-gradient-to-r from-eco-100/80 via-eco-50 to-white border border-eco-200/80 rounded-3xl p-6 md:p-10 shadow-xs overflow-hidden">
+                <!-- Decorative plant illustration SVG -->
+                <div class="absolute right-4 bottom-0 opacity-25 pointer-events-none hidden md:block">
+                    <svg width="240" height="160" viewBox="0 0 240 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M40 160V100C40 77.9086 57.9086 60 80 60V60C102.091 60 120 77.9086 120 100V160" stroke="#3d752e" stroke-width="3" stroke-linecap="round"/>
+                        <path d="M120 130V80C120 60.67 135.67 45 155 45V45C174.33 45 190 60.67 190 80V160" stroke="#3d752e" stroke-width="3" stroke-linecap="round"/>
+                        <path d="M80 90C60 70 30 75 10 95C30 115 65 110 80 90Z" fill="#76b063" fill-opacity="0.6"/>
+                        <path d="M150 70C170 50 200 55 220 75C200 95 165 90 150 70Z" fill="#52943e" fill-opacity="0.6"/>
+                        <circle cx="170" cy="30" r="10" fill="#f59e0b" fill-opacity="0.8"/>
+                        <path d="M165 25C168 22 172 22 175 25" stroke="#d97706" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+
+                <div class="max-w-2xl relative z-10">
+                    <div class="text-[11px] font-mono tracking-widest text-eco-600 font-bold mb-2 uppercase">
+                        WASTE INTELLIGENCE / AI
+                    </div>
+                    <h2 class="text-3xl md:text-5xl font-bold tracking-tight text-eco-900 mb-4 leading-tight">
+                        Make the right bin feel <span class="text-eco-600 italic font-serif font-normal">obvious.</span>
+                    </h2>
+                    <p class="text-eco-700 text-sm md:text-base leading-relaxed mb-6">
+                        Point your camera at an item or upload a photo, and let your on-device Teachable Machine model guide the next small action.
+                    </p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button onclick="startSystem()" id="start-btn" class="bg-eco-600 hover:bg-eco-700 text-white font-medium px-6 py-3 rounded-2xl shadow-md transition-all flex items-center space-x-2 cursor-pointer group">
+                            <i class="fa-solid fa-video group-hover:scale-110 transition-transform"></i>
+                            <span>Start system</span>
+                            <i class="fa-solid fa-chevron-right text-xs ml-1"></i>
+                        </button>
+                        <button onclick="triggerFileUpload()" class="bg-white hover:bg-eco-50 text-eco-800 border border-eco-300 font-medium px-5 py-3 rounded-2xl shadow-2xs transition-all flex items-center space-x-2 cursor-pointer">
+                            <i class="fa-solid fa-upload text-eco-600"></i>
+                            <span>Upload image</span>
+                        </button>
+                        <input type="file" id="image-file-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid Section: Camera View (Left) & Results/Confidence (Right) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Column: Live Camera & Preview Container (7 cols) -->
+                <div class="lg:col-span-7 flex flex-col space-y-4">
+                    <div class="bg-white border border-eco-200/80 rounded-3xl p-5 shadow-xs flex flex-col h-full">
+                        
+                        <!-- Camera Header Box -->
+                        <div class="flex items-center justify-between pb-4 border-b border-eco-100 mb-4">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-eco-100 flex items-center justify-center text-eco-700">
+                                    <i class="fa-solid fa-camera text-sm"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-eco-900 text-sm">Live camera</h3>
+                                    <p id="camera-status-text" class="text-[11px] font-mono text-eco-500 uppercase">Awaiting start</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span id="standby-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                                <span id="standby-text" class="text-xs font-mono text-eco-600 uppercase font-semibold">Standby</span>
+                            </div>
+                        </div>
+
+                        <!-- Video / Image Preview Area -->
+                        <div class="relative bg-eco-950 rounded-2xl overflow-hidden aspect-video flex items-center justify-center shadow-inner group">
+                            <!-- Webcam Element -->
+                            <video id="webcam" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover hidden"></video>
+                            
+                            <!-- Image Preview Element -->
+                            <img id="uploaded-image-preview" src="" alt="Uploaded item preview" class="absolute inset-0 w-full h-full object-cover hidden">
+
+                            <!-- Placeholder State -->
+                            <div id="camera-placeholder" class="text-center p-6 text-eco-200 flex flex-col items-center justify-center space-y-3 z-10">
+                                <div class="w-16 h-16 rounded-2xl bg-eco-900/80 border border-eco-700/50 flex items-center justify-center text-eco-300 shadow-lg">
+                                    <i class="fa-solid fa-qrcode text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-white text-sm">Your camera view will appear here</h4>
+                                    <p class="text-xs text-eco-400 max-w-xs mt-1">Start the system or upload an image to activate waste recognition.</p>
+                                </div>
+                            </div>
+
+                            <!-- Scanning Target Overlay Animation -->
+                            <div id="scanning-overlay" class="absolute inset-0 border-2 border-eco-400/40 m-6 rounded-xl pointer-events-none hidden flex flex-col justify-between p-4">
+                                <div class="flex justify-between items-start">
+                                    <span class="w-4 h-4 border-t-2 border-l-2 border-eco-400"></span>
+                                    <span class="w-4 h-4 border-t-2 border-r-2 border-eco-400"></span>
+                                </div>
+                                <div class="self-center bg-eco-950/70 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-mono text-eco-200 border border-eco-700/50">
+                                    <i class="fa-solid fa-crosshairs text-eco-400 mr-1 animate-spin"></i> AI Scanning Active...
+                                </div>
+                                <div class="flex justify-between items-end">
+                                    <span class="w-4 h-4 border-b-2 border-l-2 border-eco-400"></span>
+                                    <span class="w-4 h-4 border-b-2 border-r-2 border-eco-400"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Camera controls / switch source -->
+                        <div id="active-controls" class="mt-4 flex items-center justify-between hidden">
+                            <button onclick="stopSystem()" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-medium px-4 py-2 rounded-xl transition-colors flex items-center space-x-1.5 cursor-pointer">
+                                <i class="fa-solid fa-stop"></i>
+                                <span>Stop camera</span>
+                            </button>
+                            <span class="text-xs font-mono text-eco-600" id="fps-counter">Model: Loading...</span>
+                        </div>
+
+                        <!-- Tip Box under camera -->
+                        <div class="mt-4 bg-eco-50 border border-eco-200/70 rounded-2xl p-3.5 flex items-start space-x-3 text-xs text-eco-800">
+                            <i class="fa-solid fa-lightbulb text-amber-500 mt-0.5"></i>
+                            <p>For a steadier read, place one item in the center of the frame with a little breathing room around it.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Sorting Results & Confidence Breakdown (5 cols) -->
+                <div class="lg:col-span-5 flex flex-col space-y-6">
+                    
+                    <!-- Sorting Result Card -->
+                    <div class="bg-white border border-eco-200/80 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between pb-3 border-b border-eco-100 mb-4">
+                                <span class="text-[11px] font-mono tracking-widest uppercase font-bold text-eco-600">Sorting Result</span>
+                                <div class="flex items-center space-x-1.5 text-eco-500 text-xs font-mono">
+                                    <i class="fa-solid fa-chart-simple"></i>
+                                    <i class="fa-solid fa-leaf"></i>
+                                </div>
+                            </div>
+
+                            <div id="result-display-container" class="py-4 text-center">
+                                <div class="w-14 h-14 rounded-2xl bg-eco-100 border border-eco-200 flex items-center justify-center text-eco-700 text-2xl mx-auto mb-3 shadow-xs">
+                                    <i id="result-icon" class="fa-solid fa-magnifying-glass animate-pulse"></i>
+                                </div>
+                                <h3 id="result-title" class="text-xl font-bold text-eco-900 mb-1">Looking for waste...</h3>
+                                <p id="result-subtitle" class="text-xs text-eco-600 mb-4">Waiting for a confident read from the camera or uploaded image.</p>
+                                
+                                <!-- Bin Badge Recommendation -->
+                                <div id="bin-recommendation-badge" class="inline-flex items-center space-x-2 bg-eco-100 border border-eco-300 text-eco-800 px-4 py-2 rounded-2xl text-xs font-semibold shadow-2xs">
+                                    <i class="fa-solid fa-recycle text-eco-600"></i>
+                                    <span id="bin-text">System is waiting</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-eco-100 text-[11px] text-eco-500 flex items-center justify-between">
+                            <span id="prediction-status-sub">Status: Ready to classify</span>
+                            <span class="font-mono text-eco-700" id="top-confidence-pct">0% Confidence</span>
+                        </div>
+                    </div>
+
+                    <!-- Model Confidence breakdown -->
+                    <div class="bg-white border border-eco-200/80 rounded-3xl p-5 shadow-xs flex-1 flex flex-col">
+                        <div class="flex items-center justify-between pb-3 border-b border-eco-100 mb-4">
+                            <span class="font-bold text-eco-900 text-sm">Model confidence</span>
+                            <span class="text-[10px] font-mono bg-eco-100 text-eco-800 px-2 py-0.5 rounded-full font-semibold" id="model-state-badge">STANDBY</span>
+                        </div>
+                        <p class="text-xs text-eco-600 mb-4">Live breakdown by class from Teachable Machine.</p>
+
+                        <!-- Classes Progress Bars Container -->
+                        <div id="label-container" class="space-y-3.5 flex-1 overflow-y-auto max-h-48 pr-1">
+                            <div class="text-center py-6 text-xs text-eco-500 border border-dashed border-eco-200 rounded-2xl bg-eco-50/50">
+                                <p class="font-medium">No predictions yet</p>
+                                <p class="text-[11px] text-eco-400 mt-0.5">Start the system to see every class live.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Bottom Grid: How it works & Device Status -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- From Object to Action (8 cols) -->
+                <div class="lg:col-span-8 bg-white border border-eco-200/80 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-widest text-eco-600 font-bold">The Small Loop</span>
+                                <h3 class="text-lg font-bold text-eco-900">From object to action</h3>
+                            </div>
+                            <div class="w-8 h-8 rounded-xl bg-eco-100 flex items-center justify-center text-eco-700">
+                                <i class="fa-solid fa-seedling text-sm"></i>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                            <!-- Step 1 -->
+                            <div class="bg-eco-50/70 border border-eco-200/60 rounded-2xl p-4 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-[11px] font-mono font-bold text-eco-500">01</span>
+                                    <h4 class="font-bold text-eco-900 text-sm mt-1 mb-1">Show it</h4>
+                                    <p class="text-xs text-eco-700 leading-relaxed">Center one item in your camera view or upload photo.</p>
+                                </div>
+                                <div class="mt-4 text-eco-600 text-xs font-mono"><i class="fa-solid fa-camera mr-1"></i> Detect</div>
+                            </div>
+                            <!-- Step 2 -->
+                            <div class="bg-eco-50/70 border border-eco-200/60 rounded-2xl p-4 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-[11px] font-mono font-bold text-eco-500">02</span>
+                                    <h4 class="font-bold text-eco-900 text-sm mt-1 mb-1">Read it</h4>
+                                    <p class="text-xs text-eco-700 leading-relaxed">The local model checks its visual class instantly.</p>
+                                </div>
+                                <div class="mt-4 text-eco-600 text-xs font-mono"><i class="fa-solid fa-microchip mr-1"></i> Classify</div>
+                            </div>
+                            <!-- Step 3 -->
+                            <div class="bg-eco-50/70 border border-eco-200/60 rounded-2xl p-4 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-[11px] font-mono font-bold text-eco-500">03</span>
+                                    <h4 class="font-bold text-eco-900 text-sm mt-1 mb-1">Sort it</h4>
+                                    <p class="text-xs text-eco-700 leading-relaxed">Follow the bin cue with confidence and clear advice.</p>
+                                </div>
+                                <div class="mt-4 text-eco-600 text-xs font-mono"><i class="fa-solid fa-recycle mr-1"></i> Recycle</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Device Status (4 cols) -->
+                <div class="lg:col-span-4 bg-white border border-eco-200/80 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2 text-eco-900 font-bold text-sm mb-1">
+                            <i class="fa-solid fa-wifi text-eco-600"></i>
+                            <span>Device status</span>
+                        </div>
+                        <p class="text-xs text-eco-600 mb-4">Everything needed for a clear read, at a glance.</p>
+
+                        <div class="space-y-3">
+                            <div class="bg-eco-50 border border-eco-200/70 rounded-2xl p-3 flex items-center justify-between text-xs">
+                                <div class="flex items-center space-x-2.5 text-eco-800 font-medium">
+                                    <i class="fa-solid fa-camera text-eco-600"></i>
+                                    <span>Camera access</span>
+                                </div>
+                                <span id="status-camera-badge" class="font-mono text-[10px] bg-eco-200 text-eco-800 px-2.5 py-1 rounded-xl font-bold">NOT STARTED</span>
+                            </div>
+
+                            <div class="bg-eco-50 border border-eco-200/70 rounded-2xl p-3 flex items-center justify-between text-xs">
+                                <div class="flex items-center space-x-2.5 text-eco-800 font-medium">
+                                    <i class="fa-solid fa-brain text-eco-600"></i>
+                                    <span>Model runtime</span>
+                                </div>
+                                <span id="status-model-badge" class="font-mono text-[10px] bg-amber-100 text-amber-800 px-2.5 py-1 rounded-xl font-bold">READY TO LOAD</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-eco-100 text-[11px] text-eco-500 flex justify-between items-center">
+                        <span>Local TensorFlow.js v1.3</span>
+                        <button onclick="toggleSettingsModal()" class="text-eco-700 hover:underline font-medium">Configure URL</button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-auto py-6 px-8 border-t border-eco-200/60 text-center text-xs text-eco-600 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p>© 2026 EcoSort AI. Powered by Teachable Machine & TensorFlow.js.</p>
+            <div class="flex items-center space-x-4 font-mono text-[11px]">
+                <span class="hover:text-eco-900 cursor-pointer" onclick="switchTab('overview')">Privacy Policy</span>
+                <span>•</span>
+                <span class="hover:text-eco-900 cursor-pointer" onclick="switchTab('how-it-works')">Model Docs</span>
+            </div>
+        </footer>
+    </main>
+
+    <!-- SETTINGS / MODEL URL MODAL -->
+    <div id="settings-modal" class="fixed inset-0 bg-eco-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-eco-200 rounded-3xl max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div class="flex items-center justify-between pb-3 border-b border-eco-100 mb-4">
+                <h3 class="font-bold text-eco-900 text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-eco-600"></i>
+                    <span>Configure Teachable Machine Model</span>
+                </h3>
+                <button onclick="toggleSettingsModal()" class="w-8 h-8 rounded-full bg-eco-100 flex items-center justify-center text-eco-700 hover:bg-eco-200 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-eco-700 mb-4 leading-relaxed">
+                Enter your Teachable Machine exported model URL below. It must contain <code class="bg-eco-100 px-1 py-0.5 rounded text-eco-900 font-mono">model.json</code> and <code class="bg-eco-100 px-1 py-0.5 rounded text-eco-900 font-mono">metadata.json</code>.
+            </p>
+
+            <div class="space-y-3 mb-6">
+                <div>
+                    <label class="block text-xs font-semibold text-eco-900 mb-1">Model URL</label>
+                    <input type="text" id="model-url-input" value="https://teachablemachine.withgoogle.com/models/eBrVMMXzt/" class="w-full text-xs font-mono bg-eco-50 border border-eco-300 rounded-xl p-3 text-eco-900 focus:outline-none focus:ring-2 focus:ring-eco-500">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-3">
+                <button onclick="toggleSettingsModal()" class="px-4 py-2 text-xs font-medium text-eco-700 hover:bg-eco-100 rounded-xl transition-colors cursor-pointer">Cancel</button>
+                <button onclick="updateModelUrl()" class="px-5 py-2 text-xs font-medium bg-eco-600 hover:bg-eco-700 text-white rounded-xl shadow-xs transition-colors cursor-pointer">Save & Reload Model</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION JAVASCRIPT -->
+    <script>
+        // Teachable Machine Model Variables
+        let URL = "https://teachablemachine.withgoogle.com/models/eBrVMMXzt/";
+        let model, webcamInstance, maxPredictions = 0;
+        let isRunning = false;
+        let predictionAnimationId = null;
+        let currentMode = 'webcam'; // 'webcam' or 'image'
+
+        // DOM Elements
+        const startBtn = document.getElementById('start-btn');
+        const webcamVideo = document.getElementById('webcam');
+        const uploadedImagePreview = document.getElementById('uploaded-image-preview');
+        const cameraPlaceholder = document.getElementById('camera-placeholder');
+        const scanningOverlay = document.getElementById('scanning-overlay');
+        const activeControls = document.getElementById('active-controls');
+        const cameraStatusText = document.getElementById('camera-status-text');
+        const standbyIndicator = document.getElementById('standby-indicator');
+        const standbyText = document.getElementById('standby-text');
+        const labelContainer = document.getElementById('label-container');
+        const fpsCounter = document.getElementById('fps-counter');
+        
+        const resultIcon = document.getElementById('result-icon');
+        const resultTitle = document.getElementById('result-title');
+        const resultSubtitle = document.getElementById('result-subtitle');
+        const binRecommendationBadge = document.getElementById('bin-recommendation-badge');
+        const binText = document.getElementById('bin-text');
+        const predictionStatusSub = document.getElementById('prediction-status-sub');
+        const topConfidencePct = document.getElementById('top-confidence-pct');
+        const modelStateBadge = document.getElementById('model-state-badge');
+        
+        const statusCameraBadge = document.getElementById('status-camera-badge');
+        const statusModelBadge = document.getElementById('status-model-badge');
+
+        // Tab Switcher Helper
+        function switchTab(tabId) {
+            ['nav-overview', 'nav-how', 'nav-device'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.classList.remove('bg-eco-200/70', 'text-eco-900');
+                    el.classList.add('text-eco-700', 'hover:bg-eco-100/60');
+                }
+            });
+            const activeEl = document.getElementById(tabId === 'overview' ? 'nav-overview' : (tabId === 'how-it-works' ? 'nav-how' : 'nav-device'));
+            if(activeEl) {
+                activeEl.classList.remove('text-eco-700', 'hover:bg-eco-100/60');
+                activeEl.classList.add('bg-eco-200/70', 'text-eco-900');
+            }
+
+            if(tabId === 'device-status') {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            } else if(tabId === 'how-it-works') {
+                document.getElementById('start-btn').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // Modal Toggle
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function updateModelUrl() {
+            const inputVal = document.getElementById('model-url-input').value.trim();
+            if(inputVal) {
+                URL = inputVal.endsWith('/') ? inputVal : inputVal + '/';
+                toggleSettingsModal();
+                if(isRunning) {
+                    stopSystem();
+                }
+                initModel();
+            }
+        }
+
+        // Load Teachable Machine Model on startup
+        async function initModel() {
+            try {
+                statusModelBadge.innerText = "LOADING...";
+                statusModelBadge.className = "font-mono text-[10px] bg-amber-100 text-amber-800 px-2.5 py-1 rounded-xl font-bold animate-pulse";
+                fpsCounter.innerText = "Model: Loading weights...";
+
+                const modelURL = URL + "model.json";
+                const metadataURL = URL + "metadata.json";
+
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                statusModelBadge.innerText = "LOADED";
+                statusModelBadge.className = "font-mono text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-xl font-bold";
+                modelStateBadge.innerText = "READY";
+                fpsCounter.innerText = `Model ready (${maxPredictions} classes)`;
+
+                // Initialize label container with empty slots
+                renderEmptyLabels();
+            } catch (error) {
+                console.error("Error loading Teachable Machine model:", error);
+                statusModelBadge.innerText = "LOAD ERROR";
+                statusModelBadge.className = "font-mono text-[10px] bg-red-100 text-red-800 px-2.5 py-1 rounded-xl font-bold";
+                fpsCounter.innerText = "Model load failed. Check URL in settings.";
+            }
+        }
+
+        function renderEmptyLabels() {
+            labelContainer.innerHTML = `
+                <div class="text-center py-6 text-xs text-eco-500 border border-dashed border-eco-200 rounded-2xl bg-eco-50/50">
+                    <p class="font-medium">Model loaded successfully</p>
+                    <p class="text-[11px] text-eco-400 mt-0.5">Start system or upload image to classify.</p>
+                </div>
+            `;
+        }
+
+        // Start Camera & Prediction Loop
+        async function startSystem() {
+            if (!model) {
+                alertBox("Model is still loading or failed to load. Please check your model URL in settings.");
+                return;
+            }
+
+            if (isRunning) return;
+
+            try {
+                cameraStatusText.innerText = "INITIALIZING WEBCAM...";
+                const constraints = {
+                    video: { width: 640, height: 480, facingMode: "user" }
+                };
+                
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                webcamVideo.srcObject = stream;
+                await webcamVideo.play();
+
+                currentMode = 'webcam';
+                webcamVideo.classList.remove('hidden');
+                uploadedImagePreview.classList.add('hidden');
+                cameraPlaceholder.classList.add('hidden');
+                scanningOverlay.classList.remove('hidden');
+                activeControls.classList.remove('hidden');
+
+                standbyIndicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                standbyText.innerText = "LIVE STREAM";
+                standbyText.className = "text-xs font-mono text-emerald-700 uppercase font-bold";
+                cameraStatusText.innerText = "LIVE (WEBCAM ACTIVE)";
+
+                statusCameraBadge.innerText = "ACTIVE";
+                statusCameraBadge.className = "font-mono text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-xl font-bold";
+
+                startBtn.innerHTML = '<i class="fa-solid fa-rotate"></i><span>Restarting...</span>';
+                isRunning = true;
+
+                // Begin classification loop
+                predictLoop();
+
+            } catch (err) {
+                console.error("Webcam access error:", err);
+                cameraStatusText.innerText = "WEBCAM ERROR / BLOCKED";
+                statusCameraBadge.innerText = "BLOCKED";
+                statusCameraBadge.className = "font-mono text-[10px] bg-red-100 text-red-800 px-2.5 py-1 rounded-xl font-bold";
+                alertBox("Unable to access camera. Please allow camera permissions or use the 'Upload image' button instead.");
+            }
+        }
+
+        // Stop Camera
+        function stopSystem() {
+            if (!isRunning) return;
+            
+            if (webcamVideo.srcObject) {
+                const tracks = webcamVideo.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                webcamVideo.srcObject = null;
+            }
+
+            isRunning = false;
+            webcamVideo.classList.add('hidden');
+            scanningOverlay.classList.add('hidden');
+            activeControls.classList.add('hidden');
+            cameraPlaceholder.classList.remove('hidden');
+
+            standbyIndicator.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+            standbyText.innerText = "STANDBY";
+            standbyText.className = "text-xs font-mono text-eco-600 uppercase font-semibold";
+            cameraStatusText.innerText = "Awaiting start";
+
+            statusCameraBadge.innerText = "NOT STARTED";
+            statusCameraBadge.className = "font-mono text-[10px] bg-eco-200 text-eco-800 px-2.5 py-1 rounded-xl font-bold";
+
+            startBtn.innerHTML = '<i class="fa-solid fa-video"></i><span>Start system</span><i class="fa-solid fa-chevron-right text-xs ml-1"></i>';
+            fpsCounter.innerText = "Model paused";
+        }
+
+        // Main Prediction Loop for Webcam
+        async function predictLoop() {
+            if (!isRunning) return;
+
+            if (webcamVideo.readyState === webcamVideo.HAVE_ENOUGH_DATA) {
+                await predict(webcamVideo);
+            }
+            
+            predictionAnimationId = requestAnimationFrame(predictLoop);
+        }
+
+        // Run prediction against Teachable Machine model
+        async function predict(sourceElement) {
+            if (!model) return;
+
+            // predict can take in an image, video or canvas element
+            const prediction = await model.predict(sourceElement);
+            
+            // Sort predictions by probability descending
+            prediction.sort((a, b) => b.probability - a.probability);
+
+            // Update UI with predictions
+            updateResultsUI(prediction);
+        }
+
+        // Update UI components with model prediction scores
+        function updateResultsUI(prediction) {
+            if (!prediction || prediction.length === 0) return;
+
+            const topPrediction = prediction[0];
+            const confidencePct = Math.round(topPrediction.probability * 100);
+
+            topConfidencePct.innerText = `${confidencePct}% Confidence`;
+            predictionStatusSub.innerText = `Top Class: ${topPrediction.className}`;
+            modelStateBadge.innerText = `${confidencePct}% CONFIDENT`;
+
+            // Dynamic Bin Suggestion based on class name or keywords
+            const classNameLower = topPrediction.className.toLowerCase();
+            let binName = "Recycle Bin";
+            let binIcon = "fa-recycle";
+            let binColorClass = "bg-eco-100 border-eco-300 text-eco-800";
+            let mainIconClass = "fa-box-archive";
+
+            if (classNameLower.includes('organic') || classNameLower.includes('food') || classNameLower.includes('banana') || classNameLower.includes('apple') || classNameLower.includes('fruit') || classNameLower.includes('compost') || classNameLower.includes('vegetable')) {
+                binName = "Compost Bin (Green)";
+                binIcon = "fa-seedling";
+                binColorClass = "bg-amber-100 border-amber-300 text-amber-900";
+                mainIconClass = "fa-apple-whole";
+            } else if (classNameLower.includes('plastic') || classNameLower.includes('bottle') || classNameLower.includes('can') || classNameLower.includes('metal') || classNameLower.includes('glass')) {
+                binName = "Recycling Bin (Blue)";
+                binIcon = "fa-recycle";
+                binColorClass = "bg-sky-100 border-sky-300 text-sky-900";
+                mainIconClass = "fa-bottle-water";
+            } else if (classNameLower.includes('paper') || classNameLower.includes('cardboard') || classNameLower.includes('box')) {
+                binName = "Paper & Cardboard Bin";
+                binIcon = "fa-newspaper";
+                binColorClass = "bg-emerald-100 border-emerald-300 text-emerald-900";
+                mainIconClass = "fa-newspaper";
+            } else if (classNameLower.includes('trash') || classNameLower.includes('waste') || classNameLower.includes('general') || classNameLower.includes('garbage')) {
+                binName = "Landfill / General Waste";
+                binIcon = "fa-trash-can";
+                binColorClass = "bg-rose-100 border-rose-300 text-rose-900";
+                mainIconClass = "fa-trash";
+            } else {
+                binName = `Recommended: ${topPrediction.className}`;
+                binIcon = "fa-circle-check";
+                binColorClass = "bg-eco-100 border-eco-300 text-eco-800";
+                mainIconClass = "fa-check-to-slot";
+            }
+
+            if (confidencePct > 65) {
+                resultTitle.innerText = topPrediction.className;
+                resultSubtitle.innerText = `High certainty detected. Sort accordingly.`;
+                resultIcon.className = `fa-solid ${mainIconClass} text-eco-700`;
+                binRecommendationBadge.className = `inline-flex items-center space-x-2 border px-4 py-2 rounded-2xl text-xs font-semibold shadow-2xs ${binColorClass}`;
+                binText.innerText = binName;
+                binRecommendationBadge.querySelector('i').className = `fa-solid ${binIcon}`;
+            } else {
+                resultTitle.innerText = "Analyzing item...";
+                resultSubtitle.innerText = `Current best guess: ${topPrediction.className} (${confidencePct}%)`;
+                resultIcon.className = `fa-solid fa-magnifying-glass animate-pulse text-eco-600`;
+                binRecommendationBadge.className = `inline-flex items-center space-x-2 bg-eco-100 border border-eco-300 text-eco-800 px-4 py-2 rounded-2xl text-xs font-semibold shadow-2xs`;
+                binText.innerText = "Hold steady for better read";
+                binRecommendationBadge.querySelector('i').className = `fa-solid fa-spinner animate-spin`;
+            }
+
+            // Render progress bars for all classes
+            let barsHtml = '';
+            prediction.forEach(item => {
+                const pct = Math.round(item.probability * 100);
+                barsHtml += `
+                    <div>
+                        <div class="flex justify-between text-xs mb-1 font-medium">
+                            <span class="text-eco-900 truncate max-w-[70%]">${item.className}</span>
+                            <span class="font-mono text-eco-700">${pct}%</span>
+                        </div>
+                        <div class="w-full bg-eco-100 rounded-full h-2 overflow-hidden border border-eco-200/50">
+                            <div class="bg-eco-600 h-2 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            labelContainer.innerHTML = barsHtml;
+        }
+
+        // Image Upload Handlers
+        function triggerFileUpload() {
+            document.getElementById('image-file-input').click();
+        }
+
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!model) {
+                alertBox("Model is loading. Please wait a moment and try again.");
+                return;
+            }
+
+            if (isRunning) {
+                stopSystem();
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                uploadedImagePreview.src = e.target.result;
+                uploadedImagePreview.classList.remove('hidden');
+                webcamVideo.classList.add('hidden');
+                cameraPlaceholder.classList.add('hidden');
+                scanningOverlay.classList.remove('hidden');
+                activeControls.classList.add('hidden');
+
+                standbyIndicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+                standbyText.innerText = "PHOTO UPLOAD";
+                standbyText.className = "text-xs font-mono text-emerald-700 uppercase font-bold";
+                cameraStatusText.innerText = "IMAGE LOADED FOR CLASSIFICATION";
+
+                statusCameraBadge.innerText = "UPLOADED";
+                statusCameraBadge.className = "font-mono text-[10px] bg-sky-100 text-sky-800 px-2.5 py-1 rounded-xl font-bold";
+
+                // Wait for image to render in DOM then predict
+                setTimeout(async () => {
+                    await predict(uploadedImagePreview);
+                    scanningOverlay.classList.add('hidden');
+                }, 400);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Custom non-blocking message box replacing alert()
+        function alertBox(message) {
+            const existing = document.getElementById('custom-alert-box');
+            if(existing) existing.remove();
+
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'custom-alert-box';
+            alertDiv.className = 'fixed bottom-6 right-6 bg-eco-900 text-white px-5 py-4 rounded-2xl shadow-xl z-50 flex items-center space-x-3 text-xs max-w-sm border border-eco-700 animate-in fade-in slide-in-from-bottom-5 duration-300';
+            alertDiv.innerHTML = `
+                <i class="fa-solid fa-circle-exclamation text-amber-400 text-base shrink-0"></i>
+                <span class="flex-1">${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-eco-300 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            `;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => { if(alertDiv) alertDiv.remove(); }, 6000);
+        }
+
+        // Initialize model on window load
+        window.onload = function() {
+            initModel();
+        };
+    </script>
+</body>
+</html>
